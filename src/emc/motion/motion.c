@@ -20,9 +20,7 @@
 #include "tp.h"
 #include "rtapi_math.h"
 #include "homing.h"
-
-// Mark strings for translation, but defer translation to userspace
-#define _(s) (s)
+#include "axis.h"
 
 /***********************************************************************
 *                    KERNEL MODULE PARAMETERS                          *
@@ -89,8 +87,8 @@ emcmot_hal_data_t *emcmot_hal_data = 0;
 /* pointer to joint data */
 emcmot_joint_t *joints = 0;
 
-/* pointer to axis data */
-emcmot_axis_t *axes = 0;
+/* allocate array for joint data */
+emcmot_joint_t joint_array[EMCMOT_MAX_JOINTS];
 
 /*
   Principles of communication:
@@ -136,7 +134,6 @@ static int export_joint(int num,           joint_hal_t * addr);
 // additional halpins for extrajoints:
 static int export_extrajoint(int num, extrajoint_hal_t * addr);
 
-static int export_axis(char c, axis_hal_t  * addr);
 static int export_spindle(int num, spindle_hal_t * addr);
 
 /* init_comm_buffers() allocates and initializes the command,
@@ -240,6 +237,8 @@ static int module_intfc() {
                   ,emcmotAioWrite
                   ,emcmotSetRotaryUnlock
                   ,emcmotGetRotaryIsUnlocked
+                  ,axis_get_vel_limit
+                  ,axis_get_acc_limit
                   );
 
     tpMotData(emcmotStatus
@@ -337,7 +336,7 @@ int rtapi_app_main(void)
   else if(!num_aio){
     num_aio = DEFAULT_AIO;
   }
-    
+
     if (( num_aio < 1 ) || ( num_aio > EMCMOT_MAX_AIO )) {
 	rtapi_print_msg(RTAPI_MSG_ERR,
 	    _("MOTION: num_aio is %d, must be between 1 and %d\n"), num_aio, EMCMOT_MAX_AIO);
@@ -452,7 +451,6 @@ static int init_hal_io(void)
     int n, retval;
     joint_hal_t      *joint_data;
     extrajoint_hal_t *ejoint_data;
-    axis_hal_t       *axis_data;
 
     rtapi_print_msg(RTAPI_MSG_INFO, "MOTION: init_hal_io() starting...\n");
 
@@ -612,7 +610,7 @@ static int init_hal_io(void)
     /* default value of enable is TRUE, so simple machines
        can leave it disconnected */
     *(emcmot_hal_data->enable) = 1;
-    
+
     /* motion synched dio, init to not enabled */
     for (n = 0; n < num_dio; n++) {
 	 *(emcmot_hal_data->synch_do[n]) = 0;
@@ -680,41 +678,9 @@ static int init_hal_io(void)
         }
     }
 
-    /* export axis pins and parameters */
-    for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
-        char c = "xyzabcuvw"[n];
-        axis_data = &(emcmot_hal_data->axis[n]);
-        if ((retval = hal_pin_float_newf(HAL_OUT, &(emcmot_hal_data->axis[n].pos_cmd),
-           mot_comp_id, "axis.%c.pos-cmd",         c)) != 0) goto error;
-        if ((retval = hal_pin_float_newf(HAL_OUT, &(emcmot_hal_data->axis[n].teleop_vel_cmd),
-           mot_comp_id, "axis.%c.teleop-vel-cmd",         c)) != 0) goto error;
-        if ((retval = hal_pin_float_newf(HAL_OUT, &(emcmot_hal_data->axis[n].teleop_pos_cmd),
-           mot_comp_id, "axis.%c.teleop-pos-cmd",  c)) != 0) goto error;
-        if ((retval = hal_pin_float_newf(HAL_OUT, &(emcmot_hal_data->axis[n].teleop_vel_lim),
-           mot_comp_id, "axis.%c.teleop-vel-lim",  c)) != 0) goto error;
-        if ((retval = hal_pin_bit_newf(HAL_OUT,   &(emcmot_hal_data->axis[n].teleop_tp_enable),
-           mot_comp_id, "axis.%c.teleop-tp-enable",c)) != 0) goto error;
-        if ((retval = hal_pin_bit_newf(HAL_IN, &(emcmot_hal_data->axis[n].eoffset_enable),
-           mot_comp_id, "axis.%c.eoffset-enable", c)) != 0) return retval;
-        if ((retval = hal_pin_bit_newf(HAL_IN, &(emcmot_hal_data->axis[n].eoffset_clear),
-           mot_comp_id, "axis.%c.eoffset-clear", c)) != 0) return retval;
+    retval = axis_init_hal_io(mot_comp_id);
+    if (retval) return -1;
 
-        if ((retval = hal_pin_s32_newf(HAL_IN, &(emcmot_hal_data->axis[n].eoffset_counts),
-           mot_comp_id, "axis.%c.eoffset-counts", c)) != 0) return retval;
-        if ((retval = hal_pin_float_newf(HAL_IN, &(emcmot_hal_data->axis[n].eoffset_scale),
-           mot_comp_id, "axis.%c.eoffset-scale", c)) != 0) return retval;
-
-        if ((retval = hal_pin_float_newf(HAL_OUT, &(emcmot_hal_data->axis[n].external_offset),
-           mot_comp_id, "axis.%c.eoffset", c)) != 0) return retval;
-        if ((retval = hal_pin_float_newf(HAL_OUT, &(emcmot_hal_data->axis[n].external_offset_requested),
-           mot_comp_id, "axis.%c.eoffset-request", c)) != 0) return retval;
-
-        retval = export_axis(c, axis_data);
-	if (retval != 0) {
-	    rtapi_print_msg(RTAPI_MSG_ERR, _("MOTION: axis %c pin/param export failed\n"), c);
-	    return -1;
-	}
-    }
     if ((retval = hal_pin_bit_newf(HAL_OUT, &(emcmot_hal_data->eoffset_limited), mot_comp_id,
                   "motion.eoffset-limited")) < 0) goto error;
     if ((retval = hal_pin_bit_newf(HAL_OUT, &(emcmot_hal_data->eoffset_active), mot_comp_id,
@@ -840,33 +806,13 @@ static int export_extrajoint(int num, extrajoint_hal_t * addr)
     return 0;
 }
 
-static int export_axis(char c, axis_hal_t * addr)
-{
-    int retval, msg;
-    msg = rtapi_get_msg_level();
-    rtapi_set_msg_level(RTAPI_MSG_WARN);
-
-    if ((retval = hal_pin_bit_newf(HAL_IN,  &(addr->ajog_enable),      mot_comp_id,"axis.%c.jog-enable", c)) != 0) return retval;
-    if ((retval = hal_pin_float_newf(HAL_IN,&(addr->ajog_scale),       mot_comp_id,"axis.%c.jog-scale", c)) != 0) return retval;
-    if ((retval = hal_pin_s32_newf(HAL_IN,  &(addr->ajog_counts),      mot_comp_id,"axis.%c.jog-counts", c)) != 0) return retval;
-    if ((retval = hal_pin_bit_newf(HAL_IN,  &(addr->ajog_vel_mode),    mot_comp_id,"axis.%c.jog-vel-mode", c)) != 0) return retval;
-    if ((retval = hal_pin_bit_newf(HAL_OUT, &(addr->kb_ajog_active),   mot_comp_id,"axis.%c.kb-jog-active", c)) != 0) return retval;
-    if ((retval = hal_pin_bit_newf(HAL_OUT, &(addr->wheel_ajog_active),mot_comp_id,"axis.%c.wheel-jog-active", c)) != 0) return retval;
-
-    if ((retval = hal_pin_float_newf(HAL_IN,&(addr->ajog_accel_fraction),       mot_comp_id,"axis.%c.jog-accel-fraction", c)) != 0) return retval;
-    *addr->ajog_accel_fraction = 1.0; // fraction of accel for wheel ajogs
-
-    rtapi_set_msg_level(msg);
-    return 0;
-}
-
 /* init_comm_buffers() allocates and initializes the command,
    status, and error buffers used to communicate with the user
    space parts of emc.
 */
 static int init_comm_buffers(void)
 {
-    int joint_num, axis_num, spindle_num, n;
+    int joint_num, spindle_num, n;
     emcmot_joint_t *joint;
     int retval;
 
@@ -945,7 +891,7 @@ static int init_comm_buffers(void)
     emcmotStatus->feed_scale = 1.0;
     emcmotStatus->rapid_scale = 1.0;
     emcmotStatus->net_feed_scale = 1.0;
-    /* adaptive feed is off by default, feed override, spindle 
+    /* adaptive feed is off by default, feed override, spindle
        override, and feed hold are on */
     emcmotStatus->enables_new = FS_ENABLED | SS_ENABLED | FH_ENABLED;
     emcmotStatus->enables_queued = emcmotStatus->enables_new;
@@ -961,19 +907,15 @@ static int init_comm_buffers(void)
     emcmot_config_change();
 
     /* init pointer to joints and axes structs */
-    joints = &(emcmotStatus->joints[0]);
-    axes   = &(emcmotStatus->axes[0]);
+    joints = &(joint_array[0]);
 
     for (spindle_num = 0; spindle_num < EMCMOT_MAX_SPINDLES; spindle_num++){
         emcmotStatus->spindle_status[spindle_num].scale = 1.0;
         emcmotStatus->spindle_status[spindle_num].speed = 0.0;
     }
 
-   for (axis_num = 0; axis_num < EMCMOT_MAX_AXIS; axis_num++) {
-      emcmot_axis_t *axis;
-      axis = &axes[axis_num];
-      axis->locking_joint = -1;
-   }
+    axis_init_all();
+
     /* init per-joint stuff */
     for (joint_num = 0; joint_num < ALL_JOINTS; joint_num++) {
 	/* point to structure for this joint */
@@ -1086,14 +1028,14 @@ static int init_threads(void)
 	return -1;
     }
     /* export realtime functions that do the real work */
-    retval = hal_export_funct("motion-controller", emcmotController, 0	/* arg 
+    retval = hal_export_funct("motion-controller", emcmotController, 0	/* arg
 	 */ , 1 /* uses_fp */ , 0 /* reentrant */ , mot_comp_id);
     if (retval < 0) {
 	rtapi_print_msg(RTAPI_MSG_ERR,
 	    "MOTION: failed to export controller function\n");
 	return -1;
     }
-    retval = hal_export_funct("motion-command-handler", emcmotCommandHandler, 0	/* arg 
+    retval = hal_export_funct("motion-command-handler", emcmotCommandHandler, 0	/* arg
 	 */ , 1 /* uses_fp */ , 0 /* reentrant */ , mot_comp_id);
     if (retval < 0) {
 	rtapi_print_msg(RTAPI_MSG_ERR,
@@ -1104,7 +1046,7 @@ static int init_threads(void)
 #if 0
     /*! \todo FIXME - currently the traj planner is called from the controller */
     /* eventually it will be a separate function */
-    retval = hal_export_funct("motion-traj-planner", emcmotTrajPlanner, 0	/* arg 
+    retval = hal_export_funct("motion-traj-planner", emcmotTrajPlanner, 0	/* arg
 	 */ , 1 /* uses_fp */ ,
 	0 /* reentrant */ , mot_comp_id);
     if (retval < 0) {

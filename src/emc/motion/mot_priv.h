@@ -2,14 +2,17 @@
 * Description: mot_priv.h
 *   Macros and declarations local to the realtime sources.
 *
-* Author: 
+* Author:
 * License: GPL Version 2
 * System: Linux
-*    
+*
 * Copyright (c) 2004 All rights reserved.
 ********************************************************************/
 #ifndef MOT_PRIV_H
 #define MOT_PRIV_H
+
+// Mark strings for translation, but defer translation to userspace
+#define _(s) (s)
 
 /***********************************************************************
 *                       TYPEDEFS, ENUMS, ETC.                          *
@@ -119,29 +122,6 @@ typedef struct {
     hal_float_t *posthome_cmd; //  IN pin extrajoint
 } extrajoint_hal_t;
 
-typedef struct {
-    hal_float_t *pos_cmd;        /* RPI: commanded position */
-    hal_float_t *teleop_vel_cmd; /* RPI: commanded velocity */
-    hal_float_t *teleop_pos_cmd; /* RPI: teleop traj planner pos cmd */
-    hal_float_t *teleop_vel_lim; /* RPI: teleop traj planner vel limit */
-    hal_bit_t   *teleop_tp_enable; /* RPI: teleop traj planner is running */
-
-    hal_s32_t   *ajog_counts;	/* WPI: jogwheel position input */
-    hal_bit_t   *ajog_enable;	/* RPI: enable jogwheel */
-    hal_float_t *ajog_scale;	/* RPI: distance to jog on each count */
-    hal_float_t *ajog_accel_fraction;	/* RPI: to limit wheel jog accel */
-    hal_bit_t   *ajog_vel_mode;	/* RPI: true for "velocity mode" jogwheel */
-    hal_bit_t   *kb_ajog_active;   /* RPI: executing keyboard jog */
-    hal_bit_t   *wheel_ajog_active;/* RPI: executing handwheel jog */
-
-    hal_bit_t   *eoffset_enable;
-    hal_bit_t   *eoffset_clear;
-    hal_s32_t   *eoffset_counts;
-    hal_float_t *eoffset_scale;
-    hal_float_t *external_offset;
-    hal_float_t *external_offset_requested;
-} axis_hal_t;
-
 /* machine data */
 
 typedef struct {
@@ -175,7 +155,7 @@ typedef struct {
     hal_float_t debug_float_3;	/* RPA: generic param, for debugging */
     hal_s32_t debug_s32_0;	/* RPA: generic param, for debugging */
     hal_s32_t debug_s32_1;	/* RPA: generic param, for debugging */
-    
+
     hal_bit_t *synch_do[EMCMOT_MAX_DIO]; /* WPI array: output pins for motion synched IO */
     hal_bit_t *synch_di[EMCMOT_MAX_DIO]; /* RPI array: input pins for motion synched IO */
     hal_float_t *analog_input[EMCMOT_MAX_AIO]; /* RPI array: input pins for analog Inputs */
@@ -207,7 +187,6 @@ typedef struct {
     spindle_hal_t spindle[EMCMOT_MAX_SPINDLES];     /*spindle data */
     joint_hal_t joint[EMCMOT_MAX_JOINTS];	/* data for each joint */
     extrajoint_hal_t ejoint[EMCMOT_MAX_EXTRAJOINTS]; /* data for each extrajoint */
-    axis_hal_t axis[EMCMOT_MAX_AXIS];	        /* data for each axis */
 
     hal_bit_t   *eoffset_active; /* ext offsets active */
     hal_bit_t   *eoffset_limited; /* ext offsets exceed limit */
@@ -228,9 +207,6 @@ extern emcmot_hal_data_t *emcmot_hal_data;
 /* the actual array may be in shared memory or in kernel space, as
    determined by the init code in motion.c */
 extern emcmot_joint_t *joints;
-
-/* pointer to array of axis structs with all axis data */
-extern emcmot_axis_t *axes;
 
 /* Variable defs */
 extern KINEMATICS_FORWARD_FLAGS fflags;
@@ -253,13 +229,6 @@ extern struct emcmot_error_t *emcmotError;
 extern void emcmotCommandHandler(void *arg, long period);
 extern void emcmotController(void *arg, long period);
 extern void emcmotSetCycleTime(unsigned long nsec);
-
-/* these are related to synchronized I/O */
-extern void emcmotDioWrite(int index, char value);
-extern void emcmotAioWrite(int index, double value);
-
-extern void emcmotSetRotaryUnlock(int axis, int unlock);
-extern int emcmotGetRotaryIsUnlocked(int axis);
 
 //
 // Try to change the Motion mode to Teleop.

@@ -551,26 +551,6 @@ Suggestion: Split this in to an Error and a Status flag register..
     } spindle_status_t;
 
     typedef struct {
-	double pos_cmd;		/* commanded axis position */
-	double teleop_vel_cmd;		/* comanded axis velocity */
-	double max_pos_limit;	/* upper soft limit on axis pos */
-	double min_pos_limit;	/* lower soft limit on axis pos */
-	double vel_limit;	/* upper limit of axis speed */
-	double acc_limit;	/* upper limit of axis accel */
-	simple_tp_t teleop_tp;	/* planner for teleop mode motion */
-
-	int old_ajog_counts;	/* prior value, used for deltas */
-	int kb_ajog_active;	/* non-zero during a keyboard jog */
-	int wheel_ajog_active;	/* non-zero during a wheel jog */
-	int locking_joint;	/* locking_joint number, -1 ==> notused*/
-
-	double      ext_offset_vel_limit;	/* upper limit of axis speed for ext offset */
-	double      ext_offset_acc_limit;	/* upper limit of axis accel for ext offset */
-	int         old_eoffset_counts;
-	simple_tp_t ext_offset_tp;/* planner for external coordinate offsets*/
-    } emcmot_axis_t;
-
-    typedef struct {
 	double teleop_vel_cmd;		/* comanded axis velocity */
 	double max_pos_limit;	/* upper soft limit on axis pos */
 	double min_pos_limit;	/* lower soft limit on axis pos */
@@ -594,8 +574,6 @@ Suggestion: Split this in to an Error and a Status flag register..
 */
 
     typedef struct emcmot_status_t {
-	emcmot_joint_t joints[EMCMOT_MAX_JOINTS];	/* joint data */
-	emcmot_axis_t  axes[EMCMOT_MAX_AXIS];	    /* axis data */
 	unsigned char head;	/* flag count for mutex detect */
 	/* these three are updated only when a new command is handled */
 	cmd_code_t commandEcho;	/* echo of input command */
@@ -635,7 +613,7 @@ Suggestion: Split this in to an Error and a Status flag register..
 	EmcPose probedPos;	/* Axis positions stored as soon as possible
 				   after last probeTripped */
 
-	
+
 	int synch_di[EMCMOT_MAX_DIO]; /* inputs to the motion controller, queried by G-code */
 	int synch_do[EMCMOT_MAX_DIO]; /* outputs to the motion controller, queried by G-code */
 	double analog_input[EMCMOT_MAX_AIO]; /* inputs to the motion controller, queried by G-code */
@@ -792,6 +770,9 @@ typedef struct emcmot_internal_t {
     extern void emcmotSetRotaryUnlock(int axis, int unlock);
     extern int emcmotGetRotaryIsUnlocked(int axis);
 
+    extern double axis_get_vel_limit(int);
+    extern double axis_get_acc_limit(int);
+
 #define ALL_JOINTS emcmotConfig->numJoints
 // number of kinematics-only joints:
 #define NO_OF_KINS_JOINTS (ALL_JOINTS - emcmotConfig->numExtraJoints)
@@ -801,6 +782,9 @@ typedef struct emcmot_internal_t {
 // extrajoint     jno.s: [NO_OF_KINS_JOINTS ... (ALL_JOINTS  -1) ]
 
 #define GET_JOINT_ACTIVE_FLAG(joint) ((joint)->flag & EMCMOT_JOINT_ACTIVE_BIT ? 1 : 0)
+
+double axis_get_vel_limit(int axis_num);
+double axis_get_acc_limit(int axis_num);
 
 #ifdef __cplusplus
 }
