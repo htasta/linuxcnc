@@ -299,9 +299,8 @@ void axis_jog_incr(int n, double offset, double vel, long servo_period)
         tmp1 = axis_array[n].teleop_tp.pos_cmd - offset;
     }
 
-    // a fixed epsilon is used here for convenience
-    // it is not the same as the epsilon used as a stopping
-    // criterion in control.c
+    // ext_offset_epsilon is computed in same manner as used for 
+    // stopping criterion in control.c
     if (axis_array[n].ext_offset_tp.enable
         && (fabs(*(hal_data->axis[n].external_offset)) > ext_offset_epsilon)) {
         // external_offsets: soft limit enforcement is in control.c
