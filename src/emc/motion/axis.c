@@ -4,7 +4,8 @@
 #include "rtapi.h"
 #include "rtapi_math.h"
 #include "simple_tp.h"
-#include "mot_priv.h"       // reportError(), _()
+
+#define _(s) (s)
 
 typedef struct {
     double pos_cmd;                 /* commanded axis position */
@@ -517,8 +518,6 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
                 && (fabs(*(hal_data->axis[n].external_offset)) > ext_offset_epsilon)
                 && motion_enable_flag
                 && axis_array[n].ext_offset_tp.enable) {
-#if 1
-                // to stdout only:
                 rtapi_print_msg(RTAPI_MSG_NONE,
                            "*** Axis_%c External Offset=%.4g eps=%.4g\n"
                            "*** External Offset disabled while NON-zero\n"
@@ -526,15 +525,6 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
                            "XYZABCUVW"[n],
                            *(hal_data->axis[n].external_offset),
                            ext_offset_epsilon);
-#else
-                // as error message:
-                reportError("Axis_%c External Offset=%.4g eps=%.4g\n"
-                           "External Offset disabled while NON-zero\n"
-                           "To clear: re-enable & zero or use Machine-Off",
-                           "XYZABCUVW"[n],
-                           *(hal_data->axis[n].external_offset),
-                           ext_offset_epsilon);
-#endif
             }
             last_eoffset_enable[n] = 0;
             continue; // Note: if   not eoffset_enable
