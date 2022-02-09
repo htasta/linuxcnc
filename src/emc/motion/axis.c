@@ -81,22 +81,22 @@ void axis_initialize_external_offsets(void)
 
 static int export_axis(int mot_comp_id, char c, axis_hal_t * addr)
 {
-    int retval, msg;
+    int retval=0, msg;
     msg = rtapi_get_msg_level();
     rtapi_set_msg_level(RTAPI_MSG_WARN);
 
-    if ((retval = hal_pin_bit_newf(HAL_IN,  &(addr->ajog_enable),      mot_comp_id,"axis.%c.jog-enable", c)) != 0) return retval;
-    if ((retval = hal_pin_float_newf(HAL_IN,&(addr->ajog_scale),       mot_comp_id,"axis.%c.jog-scale", c)) != 0) return retval;
-    if ((retval = hal_pin_s32_newf(HAL_IN,  &(addr->ajog_counts),      mot_comp_id,"axis.%c.jog-counts", c)) != 0) return retval;
-    if ((retval = hal_pin_bit_newf(HAL_IN,  &(addr->ajog_vel_mode),    mot_comp_id,"axis.%c.jog-vel-mode", c)) != 0) return retval;
-    if ((retval = hal_pin_bit_newf(HAL_OUT, &(addr->kb_ajog_active),   mot_comp_id,"axis.%c.kb-jog-active", c)) != 0) return retval;
-    if ((retval = hal_pin_bit_newf(HAL_OUT, &(addr->wheel_ajog_active),mot_comp_id,"axis.%c.wheel-jog-active", c)) != 0) return retval;
+    retval += hal_pin_bit_newf(  HAL_IN, &(addr->ajog_enable),        mot_comp_id,"axis.%c.jog-enable", c);
+    retval += hal_pin_float_newf(HAL_IN, &(addr->ajog_scale),         mot_comp_id,"axis.%c.jog-scale", c);
+    retval += hal_pin_s32_newf(  HAL_IN, &(addr->ajog_counts),        mot_comp_id,"axis.%c.jog-counts", c);
+    retval += hal_pin_bit_newf(  HAL_IN, &(addr->ajog_vel_mode),      mot_comp_id,"axis.%c.jog-vel-mode", c);
+    retval += hal_pin_bit_newf(  HAL_OUT,&(addr->kb_ajog_active),     mot_comp_id,"axis.%c.kb-jog-active", c);
+    retval += hal_pin_bit_newf(  HAL_OUT,&(addr->wheel_ajog_active),  mot_comp_id,"axis.%c.wheel-jog-active", c);
+    retval += hal_pin_float_newf(HAL_IN, &(addr->ajog_accel_fraction),mot_comp_id,"axis.%c.jog-accel-fraction", c);
 
-    if ((retval = hal_pin_float_newf(HAL_IN,&(addr->ajog_accel_fraction),       mot_comp_id,"axis.%c.jog-accel-fraction", c)) != 0) return retval;
     *addr->ajog_accel_fraction = 1.0; // fraction of accel for wheel ajogs
 
     rtapi_set_msg_level(msg);
-    return 0;
+    return retval;
 }
 
 int axis_init_hal_io(int mot_comp_id)
@@ -108,47 +108,36 @@ int axis_init_hal_io(int mot_comp_id)
     }
 
     // export axis pins and parameters
-    int retval;
+    int retval=0;
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         char c = "xyzabcuvw"[n];
-        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].pos_cmd,
-           mot_comp_id, "axis.%c.pos-cmd", c);
-        if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_vel_cmd,
-           mot_comp_id, "axis.%c.teleop-vel-cmd", c);
-        if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_pos_cmd,
-           mot_comp_id, "axis.%c.teleop-pos-cmd", c);
-        if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_vel_lim,
-           mot_comp_id, "axis.%c.teleop-vel-lim",  c);
-        if (retval) return retval;
-        retval = hal_pin_bit_newf(HAL_OUT, &hal_data->axis[n].teleop_tp_enable,
-           mot_comp_id, "axis.%c.teleop-tp-enable",c);
-        if (retval) return retval;
-        retval = hal_pin_bit_newf(HAL_IN, &hal_data->axis[n].eoffset_enable,
-           mot_comp_id, "axis.%c.eoffset-enable", c);
-        if (retval) return retval;
-        retval = hal_pin_bit_newf(HAL_IN, &hal_data->axis[n].eoffset_clear,
-           mot_comp_id, "axis.%c.eoffset-clear", c);
-        if (retval) return retval;
-        retval = hal_pin_s32_newf(HAL_IN, &hal_data->axis[n].eoffset_counts,
-           mot_comp_id, "axis.%c.eoffset-counts", c);
-        if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_IN, &hal_data->axis[n].eoffset_scale,
-           mot_comp_id, "axis.%c.eoffset-scale", c);
-        if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].external_offset,
-           mot_comp_id, "axis.%c.eoffset", c);
-        if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].external_offset_requested,
-           mot_comp_id, "axis.%c.eoffset-request", c);
-        if (retval) return retval;
+        retval += hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].pos_cmd,
+                                     mot_comp_id, "axis.%c.pos-cmd", c);
+        retval += hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_vel_cmd,
+                                     mot_comp_id, "axis.%c.teleop-vel-cmd", c);
+        retval += hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_pos_cmd,
+                                     mot_comp_id, "axis.%c.teleop-pos-cmd", c);
+        retval += hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_vel_lim,
+                                     mot_comp_id, "axis.%c.teleop-vel-lim",  c);
+        retval += hal_pin_bit_newf(  HAL_OUT, &hal_data->axis[n].teleop_tp_enable,
+                                     mot_comp_id, "axis.%c.teleop-tp-enable",c);
+        retval += hal_pin_bit_newf(  HAL_IN, &hal_data->axis[n].eoffset_enable,
+                                     mot_comp_id, "axis.%c.eoffset-enable", c);
+        retval += hal_pin_bit_newf(  HAL_IN, &hal_data->axis[n].eoffset_clear,
+                                     mot_comp_id, "axis.%c.eoffset-clear", c);
+        retval += hal_pin_s32_newf(  HAL_IN, &hal_data->axis[n].eoffset_counts,
+                                     mot_comp_id, "axis.%c.eoffset-counts", c);
+        retval += hal_pin_float_newf(HAL_IN, &hal_data->axis[n].eoffset_scale,
+                                     mot_comp_id, "axis.%c.eoffset-scale", c);
+        retval += hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].external_offset,
+                                     mot_comp_id, "axis.%c.eoffset", c);
+        retval += hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].external_offset_requested,
+                                     mot_comp_id, "axis.%c.eoffset-request", c);
 
-        retval = export_axis(mot_comp_id, c, &hal_data->axis[n]);
+        retval += export_axis(mot_comp_id, c, &hal_data->axis[n]);
         if (retval != 0) {
-            rtapi_print_msg(RTAPI_MSG_ERR, _("MOTION: axis %c pin/param export failed\n"), c);
+            rtapi_print_msg(RTAPI_MSG_ERR, _("MOTION: axis %c pin/param export failed <%d>\n"), c,retval);
             return -1;
         }
     }
