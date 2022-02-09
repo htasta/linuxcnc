@@ -401,7 +401,7 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
     axis_hal_t *axis_data;
     int new_ajog_counts, delta;
     double distance, pos, stop_dist;
-    static int first_pass = 1;	/* used to set initial conditions */
+    static int first_pass = 1; /* used to set initial conditions */
 
     for (axis_num = 0; axis_num < EMCMOT_MAX_AXIS; axis_num++) {
         double aaccel_limit;
