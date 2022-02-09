@@ -179,15 +179,16 @@ void apply_spindle_limits(spindle_status_t *s){
     }
 }
 
+#define UNDER_RANGE -1
 STATIC int report_range_error(int over_range, int id, char *move_type, char axis_name)
 {
-    if (over_range < 0) {
+    if (over_range == -1) {
         reportError(_("%s move on line %d would exceed %c's %s limit"),
                     move_type, id, axis_name, _("negative"));
         return 1;
     }
 
-    if (over_range > 0) {
+    if (over_range == 1) {
         reportError(_("%s move on line %d would exceed %c's %s limit"),
                     move_type, id, axis_name, _("positive"));
         return 1;
@@ -198,32 +199,37 @@ STATIC int report_range_error(int over_range, int id, char *move_type, char axis
 
 /* inRange() returns non-zero if the position lies within the joint
    limits, or 0 if not.  It also reports an error for each joint limit
-   violation.  It's possible to get more than one violation per move. */
+   violation.  It's possible to get more than one violation per move
+   but only first axis coordinate violation is reported */
 STATIC int inRange(EmcPose pos, int id, char *move_type)
 {
     double joint_pos[EMCMOT_MAX_JOINTS];
     int joint_num;
     emcmot_joint_t *joint;
-    int in_range = 1;
+    bool in_range = 1; //disprove for out-of-range
+    int failing_axis_no = -1;
 
-    if (report_range_error(axis_check_constraint(pos.tran.x, 0), id, move_type, 'X'))
+#define ANO_TO_LETTER(ano) ( \
+                             (ano == 0) ? ('X') : \
+                             (ano == 1) ? ('Y') : \
+                             (ano == 2) ? ('Z') : \
+                             (ano == 3) ? ('A') : \
+                             (ano == 4) ? ('B') : \
+                             (ano == 5) ? ('C') : \
+                             (ano == 6) ? ('U') : \
+                             (ano == 7) ? ('V') : \
+                             (ano == 8) ? ('W') : '?' )
+
+int overunder = axis_check_constraint(pos,&failing_axis_no);
+    if (overunder == 1) {
+        report_range_error(1,id,move_type,ANO_TO_LETTER(failing_axis_no));
         in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.tran.y, 1), id, move_type, 'Y'))
+    }
+    if (overunder == -1) {
+        report_range_error(-1,id,move_type,ANO_TO_LETTER(failing_axis_no));
         in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.tran.z, 2), id, move_type, 'Z'))
-        in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.a, 3), id, move_type, 'A'))
-        in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.b, 4), id, move_type, 'B'))
-        in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.c, 5), id, move_type, 'C'))
-        in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.u, 6), id, move_type, 'U'))
-        in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.v, 7), id, move_type, 'V'))
-        in_range = 0;
-    if (report_range_error(axis_check_constraint(pos.w, 8), id, move_type, 'W'))
-        in_range = 0;
+    }
+#undef ANO_TO_LETTER
 
     /* Now, check that the endpoint puts the joints within their limits too */
 

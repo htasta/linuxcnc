@@ -549,26 +549,59 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
     return eoffset_active;
 }
 
-/* Return -1 if over negative limit, 1 if over positive limit, or 0 if in range */
-int axis_check_constraint(double target, int axis_no) {
-    double nl = axis_array[axis_no].min_pos_limit;
-    double pl = axis_array[axis_no].max_pos_limit;
+/* Return -1 if over negative limit, 1 if over positive limit, or 0 if in range
+** *failing_axis_no first axis letter failing
+*/
+int axis_check_constraint(EmcPose pos, int* failing_axis_no) {
 
-    double eps = 1e-308;
+// special case due to initializations for unused axis letters:
+#define eps  1e-308
+#define SPECIAL_CASE(target,ano) \
+    (   (fabs(target) < eps) \
+     && (fabs(axis_array[ano].min_pos_limit) < eps) \
+     && (fabs(axis_array[ano].max_pos_limit) < eps) )  ? (1) : (0)
 
-    if (    (fabs(target) < eps)
-         && (fabs(nl) < eps)
-         && (fabs(pl) < eps) ) { return 0;}
+// see pull request #1047
+#define UNDER_LIMIT(target,ano) \
+    (target < (axis_array[ano].min_pos_limit - 1e-12)) ? (1) : (0)
+#define OVER_LIMIT(target,ano) \
+    (target > (axis_array[ano].max_pos_limit + 1e-12)) ? (1) : (0)
 
-    if (target < (nl - 0.000000000001)) { // see pull request #1047
-        return -1;
-    }
+    if (   SPECIAL_CASE(pos.tran.x,0)
+        && SPECIAL_CASE(pos.tran.y,1)
+        && SPECIAL_CASE(pos.tran.z,2)
+        && SPECIAL_CASE(pos.a,     3)
+        && SPECIAL_CASE(pos.b,     4)
+        && SPECIAL_CASE(pos.c,     5)
+        && SPECIAL_CASE(pos.u,     6)
+        && SPECIAL_CASE(pos.v,     7)
+        && SPECIAL_CASE(pos.w,     8) ) return 0;
 
-    if (target > (pl + 0.000000000001)) { // see pull request #1047
-        return 1;
-    }
+    int ano;
+    ano=0; if (UNDER_LIMIT(pos.tran.x,ano)) { *failing_axis_no = ano; return -1;}
+    ano=1; if (UNDER_LIMIT(pos.tran.y,ano)) { *failing_axis_no = ano; return -1;}
+    ano=2; if (UNDER_LIMIT(pos.tran.z,ano)) { *failing_axis_no = ano; return -1;}
+    ano=3; if (UNDER_LIMIT(pos.a     ,ano)) { *failing_axis_no = ano; return -1;}
+    ano=4; if (UNDER_LIMIT(pos.b     ,ano)) { *failing_axis_no = ano; return -1;}
+    ano=5; if (UNDER_LIMIT(pos.c     ,ano)) { *failing_axis_no = ano; return -1;}
+    ano=6; if (UNDER_LIMIT(pos.u     ,ano)) { *failing_axis_no = ano; return -1;}
+    ano=7; if (UNDER_LIMIT(pos.v     ,ano)) { *failing_axis_no = ano; return -1;}
+    ano=8; if (UNDER_LIMIT(pos.w     ,ano)) { *failing_axis_no = ano; return -1;}
+
+    ano=0; if (OVER_LIMIT (pos.tran.x,ano)) { *failing_axis_no = ano; return  1;}
+    ano=1; if (OVER_LIMIT (pos.tran.y,ano)) { *failing_axis_no = ano; return  1;}
+    ano=2; if (OVER_LIMIT (pos.tran.z,ano)) { *failing_axis_no = ano; return  1;}
+    ano=3; if (OVER_LIMIT (pos.a     ,ano)) { *failing_axis_no = ano; return  1;}
+    ano=4; if (OVER_LIMIT (pos.b     ,ano)) { *failing_axis_no = ano; return  1;}
+    ano=5; if (OVER_LIMIT (pos.c     ,ano)) { *failing_axis_no = ano; return  1;}
+    ano=6; if (OVER_LIMIT (pos.u     ,ano)) { *failing_axis_no = ano; return  1;}
+    ano=7; if (OVER_LIMIT (pos.v     ,ano)) { *failing_axis_no = ano; return  1;}
+    ano=8; if (OVER_LIMIT (pos.w     ,ano)) { *failing_axis_no = ano; return  1;}
 
     return 0;
+#undef SPECIAL_CASE
+#undef UNDER_LIMIT
+#undef OVER_LIMIT
 }
 
 

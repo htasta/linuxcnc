@@ -16,7 +16,7 @@ int axis_init_hal_io(int mot_comp_id);
 
 void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, bool homing_is_active);
 hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_flag, bool all_homed);
-int axis_check_constraint(double target, int axis_no);
+int axis_check_constraint(EmcPose pos, int* failing_axis_no);
 
 void axis_jog_cont(int axis_num, double vel, long servo_period);
 void axis_jog_incr(int axis_num, double offset, double vel, long servo_period);
