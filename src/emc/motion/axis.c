@@ -451,7 +451,7 @@ void axis_sync_teleop_tp_to_carte_pos(int extfactor, double *pcmd_p[])
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         axis_array[n].teleop_tp.curr_pos = *pcmd_p[n]
-                            + extfactor * axis_array[n].ext_offset_tp.curr_pos;
+                                         + extfactor * axis_array[n].ext_offset_tp.curr_pos;
     }
 }
 
@@ -461,7 +461,7 @@ void axis_sync_carte_pos_to_teleop_tp(int extfactor, double *pcmd_p[])
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         *pcmd_p[n] = axis_array[n].teleop_tp.curr_pos
-                            + extfactor * axis_array[n].ext_offset_tp.curr_pos;
+                   + extfactor * axis_array[n].ext_offset_tp.curr_pos;
     }
 }
 
@@ -471,7 +471,7 @@ void axis_apply_ext_offsets_to_carte_pos(int extfactor, double *pcmd_p[])
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         *pcmd_p[n] = *pcmd_p[n]
-                            + extfactor * axis_array[n].ext_offset_tp.curr_pos;
+                   + extfactor * axis_array[n].ext_offset_tp.curr_pos;
     }
 }
 
@@ -634,7 +634,7 @@ int axis_update_coord_with_bound(double *pcmd_p[], double servo_period)
             *pcmd_p[n]  = axis_array[n].max_pos_limit;
             // stop growth of offsetting position:
             axis_array[n].ext_offset_tp.curr_pos = axis_array[n].max_pos_limit
-                                         - save_pos_cmd[n];
+                                                 - save_pos_cmd[n];
             if (axis_array[n].ext_offset_tp.pos_cmd > save_offset_cmd[n]) {
                 axis_array[n].ext_offset_tp.pos_cmd = save_offset_cmd[n];
             }
@@ -645,7 +645,7 @@ int axis_update_coord_with_bound(double *pcmd_p[], double servo_period)
         if (*pcmd_p[n] <= axis_array[n].min_pos_limit) {
             *pcmd_p[n]  = axis_array[n].min_pos_limit;
             axis_array[n].ext_offset_tp.curr_pos = axis_array[n].min_pos_limit
-                                         - save_pos_cmd[n];
+                                                 - save_pos_cmd[n];
             if (axis_array[n].ext_offset_tp.pos_cmd < save_offset_cmd[n]) {
                 axis_array[n].ext_offset_tp.pos_cmd = save_offset_cmd[n];
             }
