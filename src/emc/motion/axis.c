@@ -299,7 +299,7 @@ void axis_jog_incr(int n, double offset, double vel, long servo_period)
         tmp1 = axis_array[n].teleop_tp.pos_cmd - offset;
     }
 
-    // ext_offset_epsilon is computed in same manner as used for 
+    // ext_offset_epsilon is computed in same manner as used for
     // stopping criterion in control.c
     if (axis_array[n].ext_offset_tp.enable
         && (fabs(*(hal_data->axis[n].external_offset)) > ext_offset_epsilon)) {
@@ -321,7 +321,6 @@ void axis_jog_abs(int n, double offset, double vel)
     double tmp1;
 
     axis_array[n].kb_ajog_active = 1;
-    // TELEOP JOG_ABS
     if (axis_array[n].wheel_ajog_active) { return; }
     if (vel > 0.0) {
         tmp1 = axis_array[n].teleop_tp.pos_cmd + offset;
