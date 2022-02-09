@@ -68,13 +68,10 @@ void axis_init_all(void)
 
 void axis_initialize_external_offsets(void)
 {
-    axis_hal_t *axis_data;
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
-        axis_data = &hal_data->axis[n];
-
-        *(axis_data->external_offset) = 0;
-        *(axis_data->external_offset_requested) = 0;
+        *(hal_data->axis[n].external_offset) = 0;
+        *(hal_data->axis[n].external_offset_requested) = 0;
         axis_array[n].ext_offset_tp.pos_cmd  = 0;
         axis_array[n].ext_offset_tp.curr_pos = 0;
         axis_array[n].ext_offset_tp.curr_vel = 0;
@@ -115,42 +112,41 @@ int axis_init_hal_io(int mot_comp_id)
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         char c = "xyzabcuvw"[n];
-        axis_hal_t *axis_data = &(hal_data->axis[n]);
-        retval = hal_pin_float_newf(HAL_OUT, &axis_data->pos_cmd,
+        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].pos_cmd,
            mot_comp_id, "axis.%c.pos-cmd", c);
         if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &axis_data->teleop_vel_cmd,
+        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_vel_cmd,
            mot_comp_id, "axis.%c.teleop-vel-cmd", c);
         if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &axis_data->teleop_pos_cmd,
+        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_pos_cmd,
            mot_comp_id, "axis.%c.teleop-pos-cmd", c);
         if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &axis_data->teleop_vel_lim,
+        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].teleop_vel_lim,
            mot_comp_id, "axis.%c.teleop-vel-lim",  c);
         if (retval) return retval;
-        retval = hal_pin_bit_newf(HAL_OUT, &axis_data->teleop_tp_enable,
+        retval = hal_pin_bit_newf(HAL_OUT, &hal_data->axis[n].teleop_tp_enable,
            mot_comp_id, "axis.%c.teleop-tp-enable",c);
         if (retval) return retval;
-        retval = hal_pin_bit_newf(HAL_IN, &axis_data->eoffset_enable,
+        retval = hal_pin_bit_newf(HAL_IN, &hal_data->axis[n].eoffset_enable,
            mot_comp_id, "axis.%c.eoffset-enable", c);
         if (retval) return retval;
-        retval = hal_pin_bit_newf(HAL_IN, &axis_data->eoffset_clear,
+        retval = hal_pin_bit_newf(HAL_IN, &hal_data->axis[n].eoffset_clear,
            mot_comp_id, "axis.%c.eoffset-clear", c);
         if (retval) return retval;
-        retval = hal_pin_s32_newf(HAL_IN, &axis_data->eoffset_counts,
+        retval = hal_pin_s32_newf(HAL_IN, &hal_data->axis[n].eoffset_counts,
            mot_comp_id, "axis.%c.eoffset-counts", c);
         if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_IN, &axis_data->eoffset_scale,
+        retval = hal_pin_float_newf(HAL_IN, &hal_data->axis[n].eoffset_scale,
            mot_comp_id, "axis.%c.eoffset-scale", c);
         if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &axis_data->external_offset,
+        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].external_offset,
            mot_comp_id, "axis.%c.eoffset", c);
         if (retval) return retval;
-        retval = hal_pin_float_newf(HAL_OUT, &axis_data->external_offset_requested,
+        retval = hal_pin_float_newf(HAL_OUT, &hal_data->axis[n].external_offset_requested,
            mot_comp_id, "axis.%c.eoffset-request", c);
         if (retval) return retval;
 
-        retval = export_axis(mot_comp_id, c, axis_data);
+        retval = export_axis(mot_comp_id, c, &hal_data->axis[n]);
         if (retval != 0) {
             rtapi_print_msg(RTAPI_MSG_ERR, _("MOTION: axis %c pin/param export failed\n"), c);
             return -1;
@@ -166,17 +162,16 @@ void axis_output_to_hal(double *pcmd_p[])
     int n;
     for (n = 0; n < EMCMOT_MAX_AXIS; n++) {
         emcmot_axis_t *axis = &axis_array[n];
-        axis_hal_t *axis_data = &hal_data->axis[n];
-        *(axis_data->teleop_vel_cmd)    = axis->teleop_vel_cmd;
-        *(axis_data->teleop_pos_cmd)    = axis->teleop_tp.pos_cmd;
-        *(axis_data->teleop_vel_lim)    = axis->teleop_tp.max_vel;
-        *(axis_data->teleop_tp_enable)  = axis->teleop_tp.enable;
-        *(axis_data->kb_ajog_active)    = axis->kb_ajog_active;
-        *(axis_data->wheel_ajog_active) = axis->wheel_ajog_active;
+        *(hal_data->axis[n].teleop_vel_cmd)    = axis->teleop_vel_cmd;
+        *(hal_data->axis[n].teleop_pos_cmd)    = axis->teleop_tp.pos_cmd;
+        *(hal_data->axis[n].teleop_vel_lim)    = axis->teleop_tp.max_vel;
+        *(hal_data->axis[n].teleop_tp_enable)  = axis->teleop_tp.enable;
+        *(hal_data->axis[n].kb_ajog_active)    = axis->kb_ajog_active;
+        *(hal_data->axis[n].wheel_ajog_active) = axis->wheel_ajog_active;
 
         // hal pins: axis.L.pos-cmd reported without applied offsets:
-        *(axis_data->pos_cmd) = *pcmd_p[n]
-                              - axis->ext_offset_tp.curr_pos;
+        *(hal_data->axis[n].pos_cmd) = *pcmd_p[n]
+                                     - axis->ext_offset_tp.curr_pos;
      }
 }
 
@@ -284,9 +279,8 @@ void axis_jog_cont(int axis_num, double vel, long servo_period)
     emcmot_axis_t *axis = &axis_array[axis_num];
 
     double ext_offset_epsilon = TINY_DP(axis->ext_offset_tp.max_acc, servo_period);
-    axis_hal_t *axis_data = &hal_data->axis[axis_num];
     if (axis->ext_offset_tp.enable
-        && (fabs(*(axis_data->external_offset)) > ext_offset_epsilon)) {
+        && (fabs(*(hal_data->axis[axis_num].external_offset)) > ext_offset_epsilon)) {
         /* here: set pos_cmd to a big number so that with combined
         *        teleop jog plus external offsets the soft limits
         *        can always be reached
@@ -322,12 +316,11 @@ void axis_jog_incr(int axis_num, double offset, double vel, long servo_period)
         tmp1 = axis->teleop_tp.pos_cmd - offset;
     }
 
-    axis_hal_t *axis_data = &hal_data->axis[axis_num];
     // a fixed epsilon is used here for convenience
     // it is not the same as the epsilon used as a stopping
     // criterion in control.c
     if (axis->ext_offset_tp.enable
-        && (fabs(*(axis_data->external_offset)) > ext_offset_epsilon)) {
+        && (fabs(*(hal_data->axis[axis_num].external_offset)) > ext_offset_epsilon)) {
         // external_offsets: soft limit enforcement is in control.c
     } else {
         if (tmp1 > axis->max_pos_limit) { return; }
@@ -398,7 +391,6 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
 {
     int axis_num;
     emcmot_axis_t *axis;
-    axis_hal_t *axis_data;
     int new_ajog_counts, delta;
     double distance, pos, stop_dist;
     static int first_pass = 1; /* used to set initial conditions */
@@ -406,17 +398,16 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
     for (axis_num = 0; axis_num < EMCMOT_MAX_AXIS; axis_num++) {
         double aaccel_limit;
         axis = &axis_array[axis_num];
-        axis_data = &hal_data->axis[axis_num];
 
         // disallow accel bogus fractions
-        if (   (*(axis_data->ajog_accel_fraction) > 1)
-            || (*(axis_data->ajog_accel_fraction) < 0) ) {
+        if (   (*(hal_data->axis[axis_num].ajog_accel_fraction) > 1)
+            || (*(hal_data->axis[axis_num].ajog_accel_fraction) < 0) ) {
             aaccel_limit = axis->acc_limit;
         } else {
-            aaccel_limit = *(axis_data->ajog_accel_fraction) * axis->acc_limit;
+            aaccel_limit = *(hal_data->axis[axis_num].ajog_accel_fraction) * axis->acc_limit;
         }
 
-        new_ajog_counts = *(axis_data->ajog_counts);
+        new_ajog_counts = *(hal_data->axis[axis_num].ajog_counts);
         delta = new_ajog_counts - axis->old_ajog_counts;
         axis->old_ajog_counts = new_ajog_counts;
         if ( first_pass ) { continue; }
@@ -429,7 +420,7 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
             return;
         }
         if (!motion_enable_flag)              { continue; }
-        if ( *(axis_data->ajog_enable) == 0 ) { continue; }
+        if ( *(hal_data->axis[axis_num].ajog_enable) == 0 ) { continue; }
         if (homing_is_active)                 { continue; }
         if (axis->kb_ajog_active)             { continue; }
 
@@ -440,9 +431,9 @@ void axis_handle_jogwheels(bool motion_teleop_flag, bool motion_enable_flag, boo
             continue;
         }
 
-        distance = delta * *(axis_data->ajog_scale);
+        distance = delta * *(hal_data->axis[axis_num].ajog_scale);
         pos = axis->teleop_tp.pos_cmd + distance;
-        if ( *(axis_data->ajog_vel_mode) ) {
+        if ( *(hal_data->axis[axis_num].ajog_vel_mode) ) {
             double v = axis->vel_limit;
             /* compute stopping distance at max speed */
             stop_dist = v * v / ( 2 * aaccel_limit);
@@ -502,7 +493,6 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
 {
     static int first_pass = 1;
     emcmot_axis_t *axis;
-    axis_hal_t *axis_data;
     int new_eoffset_counts, delta;
     static int last_eoffset_enable[EMCMOT_MAX_AXIS];
     double ext_offset_epsilon;
@@ -517,31 +507,29 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
         axis->ext_offset_tp.max_vel = axis->ext_offset_vel_limit;
         axis->ext_offset_tp.max_acc = axis->ext_offset_acc_limit;
 
-        axis_data = &hal_data->axis[n];
-
-        new_eoffset_counts       = *(axis_data->eoffset_counts);
+        new_eoffset_counts       = *(hal_data->axis[n].eoffset_counts);
         delta                    = new_eoffset_counts - axis->old_eoffset_counts;
         axis->old_eoffset_counts = new_eoffset_counts;
 
-        *(axis_data->external_offset)  = axis->ext_offset_tp.curr_pos;
+        *(hal_data->axis[n].external_offset)  = axis->ext_offset_tp.curr_pos;
         axis->ext_offset_tp.enable = 1;
         if ( first_pass ) {
-            *(axis_data->external_offset) = 0;
+            *(hal_data->axis[n].external_offset) = 0;
             continue;
         }
 
         // Use stopping criterion of simple_tp.c:
         ext_offset_epsilon = TINY_DP(axis->ext_offset_tp.max_acc, servo_period);
-        if (fabs(*(axis_data->external_offset)) > ext_offset_epsilon) {
+        if (fabs(*(hal_data->axis[n].external_offset)) > ext_offset_epsilon) {
             eoffset_active = 1;
         }
-        if ( !*(axis_data->eoffset_enable) ) {
+        if ( !*(hal_data->axis[n].eoffset_enable) ) {
             axis->ext_offset_tp.enable = 0;
             // Detect disabling of eoffsets:
             //   At very high accel, simple planner may terminate with
             //   a larger position value than occurs at more realistic accels.
             if (last_eoffset_enable[n]
-                && (fabs(*(axis_data->external_offset)) > ext_offset_epsilon)
+                && (fabs(*(hal_data->axis[n].external_offset)) > ext_offset_epsilon)
                 && motion_enable_flag
                 && axis->ext_offset_tp.enable) {
 #if 1
@@ -551,7 +539,7 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
                            "*** External Offset disabled while NON-zero\n"
                            "*** To clear: re-enable & zero or use Machine-Off\n",
                            "XYZABCUVW"[n],
-                           *(axis_data->external_offset),
+                           *(hal_data->axis[n].external_offset),
                            ext_offset_epsilon);
 #else
                 // as error message:
@@ -559,7 +547,7 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
                            "External Offset disabled while NON-zero\n"
                            "To clear: re-enable & zero or use Machine-Off",
                            "XYZABCUVW"[n],
-                           *(axis_data->external_offset),
+                           *(hal_data->axis[n].external_offset),
                            ext_offset_epsilon);
 #endif
             }
@@ -569,17 +557,17 @@ hal_bit_t axis_plan_external_offsets(double servo_period, bool motion_enable_fla
                       //       useful for eoffset_pid hold
         }
         last_eoffset_enable[n] = 1;
-        if (*(axis_data->eoffset_clear)) {
+        if (*(hal_data->axis[n].eoffset_clear)) {
             axis->ext_offset_tp.pos_cmd             = 0;
-            *(axis_data->external_offset_requested) = 0;
+            *(hal_data->axis[n].external_offset_requested) = 0;
             continue;
         }
         if (delta == 0)           { continue; }
         if (!all_homed)           { continue; }
         if (!motion_enable_flag)  { continue; }
 
-        axis->ext_offset_tp.pos_cmd   += delta *  *(axis_data->eoffset_scale);
-        *(axis_data->external_offset_requested) = axis->ext_offset_tp.pos_cmd;
+        axis->ext_offset_tp.pos_cmd   += delta *  *(hal_data->axis[n].eoffset_scale);
+        *(hal_data->axis[n].external_offset_requested) = axis->ext_offset_tp.pos_cmd;
     } // for n
     first_pass = 0;
 
