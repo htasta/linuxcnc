@@ -263,9 +263,19 @@ double axis_get_compound_velocity(void)
     return 0.0;
 }
 
-double axis_get_ext_offset_curr_pos(int axis_num)
+EmcPose axis_get_ext_offset_curr_pos()
 {
-    return axis_array[axis_num].ext_offset_tp.curr_pos;
+    EmcPose p;
+    p.tran.x = axis_array[0].ext_offset_tp.curr_pos;
+    p.tran.y = axis_array[1].ext_offset_tp.curr_pos;
+    p.tran.z = axis_array[2].ext_offset_tp.curr_pos;
+    p.a      = axis_array[3].ext_offset_tp.curr_pos;
+    p.b      = axis_array[4].ext_offset_tp.curr_pos;
+    p.c      = axis_array[5].ext_offset_tp.curr_pos;
+    p.u      = axis_array[6].ext_offset_tp.curr_pos;
+    p.v      = axis_array[7].ext_offset_tp.curr_pos;
+    p.w      = axis_array[8].ext_offset_tp.curr_pos;
+    return p;
 }
 
 

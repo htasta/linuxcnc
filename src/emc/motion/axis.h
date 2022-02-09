@@ -4,6 +4,7 @@
 
 #include "rtapi_bool.h"
 #include "hal.h"
+#include "emcpose.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,7 +41,7 @@ double axis_get_vel_limit(int axis_num);
 double axis_get_acc_limit(int axis_num);
 int axis_get_locking_joint(int axis_num);
 double axis_get_compound_velocity(void);
-double axis_get_ext_offset_curr_pos(int axis_num);
+EmcPose axis_get_ext_offset_curr_pos(void);
 
 double axis_get_teleop_vel_cmd(int axis_num);
 

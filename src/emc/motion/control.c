@@ -2026,16 +2026,7 @@ static void update_status(void)
         axis_status->min_pos_limit = axis_get_min_pos_limit(axis_num);
     }
 
-    emcmotStatus->eoffset_pose.tran.x = axis_get_ext_offset_curr_pos(0);
-    emcmotStatus->eoffset_pose.tran.y = axis_get_ext_offset_curr_pos(1);
-    emcmotStatus->eoffset_pose.tran.z = axis_get_ext_offset_curr_pos(2);
-    emcmotStatus->eoffset_pose.a      = axis_get_ext_offset_curr_pos(3);
-    emcmotStatus->eoffset_pose.b      = axis_get_ext_offset_curr_pos(4);
-    emcmotStatus->eoffset_pose.c      = axis_get_ext_offset_curr_pos(5);
-    emcmotStatus->eoffset_pose.u      = axis_get_ext_offset_curr_pos(6);
-    emcmotStatus->eoffset_pose.v      = axis_get_ext_offset_curr_pos(7);
-    emcmotStatus->eoffset_pose.w      = axis_get_ext_offset_curr_pos(8);
-
+    emcmotStatus->eoffset_pose= axis_get_ext_offset_curr_pos();
     emcmotStatus->external_offsets_applied = *(emcmot_hal_data->eoffset_active);
 
     for (dio = 0; dio < emcmotConfig->numDIO; dio++) {
